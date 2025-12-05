@@ -1,10 +1,13 @@
-from crewai import Agent
+from crewai import Agent, LLM
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
 class ResearchAgents:
+    def __init__(self):
+        self.llm = LLM(model="gemini/gemini-1.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
+    
     def research_agent(self):
         return Agent(
             role="Research Specialist",
@@ -12,6 +15,7 @@ class ResearchAgents:
             backstory="""You are an expert researcher with years of experience in 
             academic and industry research. You excel at finding relevant information 
             from multiple sources and identifying credible references.""",
+            llm=self.llm,
             verbose=True,
             allow_delegation=False
         )
@@ -23,6 +27,7 @@ class ResearchAgents:
             backstory="""You are a skilled analyst who can identify patterns, 
             validate facts, and synthesize complex information into clear insights. 
             You have a keen eye for detecting inconsistencies and bias.""",
+            llm=self.llm,
             verbose=True,
             allow_delegation=False
         )
@@ -34,6 +39,7 @@ class ResearchAgents:
             backstory="""You are an experienced technical writer who excels at 
             creating clear, engaging, and professional documentation. You know how 
             to structure information for maximum impact and readability.""",
+            llm=self.llm,
             verbose=True,
             allow_delegation=False
         )
