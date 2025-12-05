@@ -6,7 +6,7 @@ load_dotenv()
 
 class ResearchAgents:
     def __init__(self):
-        self.llm = LLM(model="gemini/gemini-1.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
+        self.llm = LLM(model="gpt-4o-mini", api_key=os.getenv("OPENAI_API_KEY"))
     
     def research_agent(self):
         return Agent(
