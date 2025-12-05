@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel
 from pathlib import Path
 import uvicorn
-from crew import ResearchCrew
+import asyncio
+import json
 from datetime import datetime
 import os
 
@@ -18,17 +18,57 @@ class ResearchResponse(BaseModel):
     status: str
     report: str
     file_path: str = None
+    error: str = None
+
+async def research_stream(topic: str):
+    try:
+        yield f"data: {json.dumps({'status': 'starting', 'message': 'Initializing AI agents...'})}\n\n"
+        await asyncio.sleep(0.5)
+        
+        yield f"data: {json.dumps({'status': 'research', 'agent': 'Research Agent', 'message': 'Gathering information on: ' + topic})}\n\n"
+        await asyncio.sleep(1)
+        
+        yield f"data: {json.dumps({'status': 'analysis', 'agent': 'Analyst Agent', 'message': 'Analyzing and validating findings...'})}\n\n"
+        await asyncio.sleep(1)
+        
+        yield f"data: {json.dumps({'status': 'writing', 'agent': 'Writer Agent', 'message': 'Creating professional report...'})}\n\n"
+        await asyncio.sleep(1)
+        
+        from crew import ResearchCrew
+        crew = ResearchCrew()
+        result = crew.run(topic)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_topic = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in topic)
+        safe_topic = safe_topic.replace(' ', '_').lower()[:50]
+        
+        output_dir = Path("output")
+        output_dir.mkdir(exist_ok=True)
+        
+        file_path = output_dir / f"{safe_topic}_{timestamp}.md"
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(result)
+        
+        yield f"data: {json.dumps({'status': 'complete', 'message': 'Report generated!', 'report': result, 'file_path': str(file_path)})}\n\n"
+    
+    except Exception as e:
+        yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    html_file = Path(__file__).parent / "static" / "index.html"
-    if html_file.exists():
-        return FileResponse(html_file)
     return HTMLResponse(content=get_default_html())
+
+@app.get("/api/research/stream")
+async def research_stream_endpoint(topic: str):
+    return StreamingResponse(
+        research_stream(topic),
+        media_type="text/event-stream"
+    )
 
 @app.post("/api/research", response_model=ResearchResponse)
 async def create_research(request: ResearchRequest):
     try:
+        from crew import ResearchCrew
         crew = ResearchCrew()
         result = crew.run(request.topic)
         
@@ -49,7 +89,11 @@ async def create_research(request: ResearchRequest):
             file_path=str(file_path)
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return ResearchResponse(
+            status="error",
+            report="",
+            error=str(e)
+        )
 
 @app.get("/api/reports")
 async def list_reports():
@@ -246,30 +290,49 @@ def get_default_html():
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const topic = document.getElementById('topic').value;
-                const depth = document.getElementById('depth').value;
                 
                 loading.style.display = 'block';
                 submitBtn.disabled = true;
-                resultDiv.textContent = 'Processing...';
+                resultDiv.innerHTML = '<div style="color: #667eea; font-family: sans-serif;"><strong>Starting research...</strong></div>';
                 
-                try {
-                    const response = await fetch('/api/research', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ topic, depth })
-                    });
+                const eventSource = new EventSource(`/api/research/stream?topic=${encodeURIComponent(topic)}`);
+                
+                eventSource.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
                     
-                    if (!response.ok) throw new Error('Research failed');
-                    
-                    const data = await response.json();
-                    resultDiv.textContent = data.report;
-                    loadReports();
-                } catch (error) {
-                    resultDiv.textContent = 'Error: ' + error.message;
-                } finally {
+                    if (data.status === 'starting') {
+                        resultDiv.innerHTML = `<div style="color: #667eea;">🚀 ${data.message}</div>`;
+                    }
+                    else if (data.status === 'research') {
+                        resultDiv.innerHTML += `<div style="color: #28a745; margin-top: 10px;">📚 <strong>${data.agent}:</strong> ${data.message}</div>`;
+                    }
+                    else if (data.status === 'analysis') {
+                        resultDiv.innerHTML += `<div style="color: #ffc107; margin-top: 10px;">🔍 <strong>${data.agent}:</strong> ${data.message}</div>`;
+                    }
+                    else if (data.status === 'writing') {
+                        resultDiv.innerHTML += `<div style="color: #17a2b8; margin-top: 10px;">✍️ <strong>${data.agent}:</strong> ${data.message}</div>`;
+                    }
+                    else if (data.status === 'complete') {
+                        resultDiv.innerHTML = `<div style="color: #28a745; margin-bottom: 15px;">✅ ${data.message}</div><hr><pre style="white-space: pre-wrap; font-family: 'Courier New', monospace;">${data.report}</pre>`;
+                        eventSource.close();
+                        loading.style.display = 'none';
+                        submitBtn.disabled = false;
+                        loadReports();
+                    }
+                    else if (data.status === 'error') {
+                        resultDiv.innerHTML = `<div style="color: #dc3545;">❌ Error: ${data.message}</div>`;
+                        eventSource.close();
+                        loading.style.display = 'none';
+                        submitBtn.disabled = false;
+                    }
+                };
+                
+                eventSource.onerror = (error) => {
+                    resultDiv.innerHTML = '<div style="color: #dc3545;">❌ Connection error. Please try again.</div>';
+                    eventSource.close();
                     loading.style.display = 'none';
                     submitBtn.disabled = false;
-                }
+                };
             });
             
             async function loadReports() {
@@ -285,7 +348,7 @@ def get_default_html():
             }
             
             async function loadReport(filename) {
-                const response = await fetch(\`/api/reports/\${filename}\`);
+                const response = await fetch(`/api/reports/${filename}`);
                 const data = await response.json();
                 document.getElementById('result').textContent = data.content;
             }
