@@ -52,7 +52,35 @@ async def research_stream(topic: str):
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(result_text)
         
-        yield f"data: {json.dumps({'status': 'complete', 'message': 'Report generated!', 'report': result_text, 'file_path': str(file_path)})}\n\n"
+        # Create workflow visualization data
+        workflow = {
+            "agents": [
+                {
+                    "name": "Research Agent",
+                    "role": "Information Gathering",
+                    "task": f"Searched and collected information about '{topic}' from credible sources",
+                    "output": "Key facts, statistics, trends, examples, and source citations",
+                    "icon": "📚"
+                },
+                {
+                    "name": "Analyst Agent",
+                    "role": "Data Synthesis & Validation",
+                    "task": "Analyzed gathered information, validated accuracy, and identified patterns",
+                    "output": "Synthesized insights, quality assessment, and key findings",
+                    "icon": "🔍"
+                },
+                {
+                    "name": "Writer Agent",
+                    "role": "Report Creation",
+                    "task": "Created professional report with clear structure and citations",
+                    "output": "Final research report in markdown format",
+                    "icon": "✍️"
+                }
+            ],
+            "process": "Sequential collaboration: Research → Analysis → Writing"
+        }
+        
+        yield f"data: {json.dumps({'status': 'complete', 'message': 'Report generated!', 'report': result_text, 'file_path': str(file_path), 'workflow': workflow})}\n\n"
     
     except Exception as e:
         yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
@@ -319,7 +347,36 @@ def get_default_html():
                         resultDiv.innerHTML += `<div style="color: #17a2b8; margin-top: 10px;">✍️ <strong>${data.agent}:</strong> ${data.message}</div>`;
                     }
                     else if (data.status === 'complete') {
-                        resultDiv.innerHTML = `<div style="color: #28a745; margin-bottom: 15px;">✅ ${data.message}</div><hr><pre style="white-space: pre-wrap; font-family: 'Courier New', monospace;">${data.report}</pre>`;
+                        // Display report
+                        resultDiv.innerHTML = `
+                            <div style="color: #28a745; margin-bottom: 15px;">✅ ${data.message}</div>
+                            <hr><pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; max-height: 400px; overflow-y: auto;">${data.report}</pre>
+                        `;
+                        
+                        // Display workflow visualization
+                        if (data.workflow) {
+                            const workflowHTML = `
+                                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                    <h3 style="margin-bottom: 15px; color: #333;">🔄 Research Workflow</h3>
+                                    <p style="color: #666; margin-bottom: 20px;"><strong>Process:</strong> ${data.workflow.process}</p>
+                                    ${data.workflow.agents.map((agent, index) => `
+                                        <div style="margin-bottom: 20px; padding: 15px; background: white; border-left: 4px solid ${index === 0 ? '#28a745' : index === 1 ? '#ffc107' : '#17a2b8'}; border-radius: 4px;">
+                                            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                                <span style="font-size: 24px; margin-right: 10px;">${agent.icon}</span>
+                                                <div>
+                                                    <h4 style="margin: 0; color: #333;">${agent.name}</h4>
+                                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">${agent.role}</p>
+                                                </div>
+                                            </div>
+                                            <p style="margin: 5px 0; color: #555;"><strong>Task:</strong> ${agent.task}</p>
+                                            <p style="margin: 5px 0; color: #555;"><strong>Output:</strong> ${agent.output}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                            resultDiv.innerHTML += workflowHTML;
+                        }
+                        
                         eventSource.close();
                         loading.style.display = 'none';
                         submitBtn.disabled = false;
