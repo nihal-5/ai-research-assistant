@@ -38,6 +38,9 @@ async def research_stream(topic: str):
         crew = ResearchCrew()
         result = crew.run(topic)
         
+        # Convert CrewOutput to string
+        result_text = str(result)
+        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_topic = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in topic)
         safe_topic = safe_topic.replace(' ', '_').lower()[:50]
@@ -47,9 +50,9 @@ async def research_stream(topic: str):
         
         file_path = output_dir / f"{safe_topic}_{timestamp}.md"
         with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(result)
+            f.write(result_text)
         
-        yield f"data: {json.dumps({'status': 'complete', 'message': 'Report generated!', 'report': result, 'file_path': str(file_path)})}\n\n"
+        yield f"data: {json.dumps({'status': 'complete', 'message': 'Report generated!', 'report': result_text, 'file_path': str(file_path)})}\n\n"
     
     except Exception as e:
         yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
@@ -72,6 +75,9 @@ async def create_research(request: ResearchRequest):
         crew = ResearchCrew()
         result = crew.run(request.topic)
         
+        # Convert CrewOutput to string
+        result_text = str(result)
+        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_topic = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in request.topic)
         safe_topic = safe_topic.replace(' ', '_').lower()[:50]
@@ -81,11 +87,11 @@ async def create_research(request: ResearchRequest):
         
         file_path = output_dir / f"{safe_topic}_{timestamp}.md"
         with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(result)
+            f.write(result_text)
         
         return ResearchResponse(
             status="success",
-            report=result,
+            report=result_text,
             file_path=str(file_path)
         )
     except Exception as e:
