@@ -46,7 +46,22 @@ cp .env.example .env
 
 ## Usage
 
-### Basic Usage
+### Web Dashboard (Recommended)
+
+Start the web interface:
+```bash
+python app.py
+```
+
+Then open http://localhost:8000 in your browser.
+
+The dashboard provides:
+- Visual interface for research requests
+- Real-time progress tracking
+- Report history viewer
+- Download generated reports
+
+### Command Line Interface
 
 ```bash
 python research.py "Artificial Intelligence in Healthcare"
