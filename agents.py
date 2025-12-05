@@ -1,5 +1,5 @@
 from crewai import Agent, Task, Crew, Process
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 import os
 
@@ -7,8 +7,9 @@ load_dotenv()
 
 class ResearchAgents:
     def __init__(self):
-        self.llm = ChatOpenAI(
-            model=os.getenv("MODEL", "gpt-4"),
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-pro",
+            google_api_key=os.getenv("OPENAI_API_KEY"),
             temperature=float(os.getenv("TEMPERATURE", "0.7"))
         )
     
