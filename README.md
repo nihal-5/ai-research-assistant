@@ -2,6 +2,12 @@
 
 A multi-agent system powered by CrewAI that conducts comprehensive research on any topic and generates professional reports.
 
+## 🚀 Live Demo
+
+**[View in AI Portfolio Dashboard](https://unharmable-threadlike-ruth.ngrok-free.dev)** | **[Direct Access](https://unharmable-threadlike-ruth.ngrok-free.dev:8003)**
+
+> Part of **[Nihal's AI Portfolio](https://unharmable-threadlike-ruth.ngrok-free.dev)** - Unified dashboard featuring 5 cutting-edge AI services
+
 ## Overview
 
 This project uses three specialized AI agents that collaborate to research topics, analyze findings, and produce well-structured reports:
@@ -53,7 +59,7 @@ Start the web interface:
 python app.py
 ```
 
-Then open http://localhost:8000 in your browser.
+Then open https://unharmable-threadlike-ruth.ngrok-free.dev:8000 in your browser.
 
 The dashboard provides:
 - Visual interface for research requests
